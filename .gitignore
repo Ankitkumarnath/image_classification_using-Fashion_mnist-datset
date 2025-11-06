@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.npy
+.ipynb_checkpoints/
+
+# Virtual envs
+venv/
+.venv/
+
+# Mac
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Build / misc
+dist/
+build/
+wheels/
+
+# Project artifacts
+models/*.h5
+outputs/
+data/
