@@ -13,37 +13,42 @@ def load_model():
         class_names = json.load(f)
     return model, class_names
 
-def pad_to_square(img, fill=255):
-    w, h = img.size
-    if w == h:
-        return img
-    size = max(w, h)
-    new_img = Image.new(img.mode, (size, size), color=fill)
-    new_img.paste(img, ((size - w) // 2, (size - h) // 2))
-    return new_img
+# --- NEW: your preprocess_image function (used below) ---
+def preprocess_image(image, target_size, dataset_type=''):
+    """
+    Preprocess uploaded image:
+    - Converts RGB to grayscale for Fashion-MNIST
+    - Normalizes pixels to [0,1]
+    - Resizes to model input shape
+    """
+    if dataset_type == 'fashion_mnist':
+        # Convert to grayscale (Fashion-MNIST is 1 channel)
+        if image.mode != 'L':
+            image = image.convert('L')
+            st.sidebar.info("📸 Converted image to grayscale for Fashion-MNIST model.")
 
-def should_invert(img_gray):
-    corners = [
-        img_gray.getpixel((0,0)),
-        img_gray.getpixel((img_gray.width-1,0)),
-        img_gray.getpixel((0,img_gray.height-1)),
-        img_gray.getpixel((img_gray.width-1,img_gray.height-1)),
-    ]
-    return (sum(corners) / 4.0) > 128
+        # Equalize brightness & contrast for clearer features
+        image = ImageOps.autocontrast(image)
+        image = ImageOps.equalize(image)
 
-def preprocess(img: Image.Image):
-    img = img.convert("L")
-    img = ImageOps.autocontrast(img)
-    img = pad_to_square(img, fill=255)
-    img = img.resize((28,28), Image.Resampling.LANCZOS)
-    if should_invert(img):
-        img = ImageOps.invert(img)
-    arr = np.array(img, dtype="float32") / 255.0
-    arr = arr[..., None][None, ...]
-    return arr
+    # Resize to model input size
+    image = image.resize(target_size)
+
+    # Convert to array and normalize
+    img_array = np.array(image).astype('float32') / 255.0
+
+    # Add missing grayscale channel
+    if dataset_type == 'fashion_mnist' and len(img_array.shape) == 2:
+        img_array = np.expand_dims(img_array, axis=-1)
+
+    # Add batch dimension
+    img_array = np.expand_dims(img_array, axis=0)
+
+    return img_array
 
 st.title("Fashion-MNIST CNN")
-st.write("Upload an image (grayscale).This app is trained on grayscale data of FASHIONMNIST  so it's capable of detecting only gray scale image so only provide grayscale image The app normalizes to Fashion-MNIST style for better accuracy.")
+st.write("Upload an image (grayscale). This app is trained on grayscale data of FASHIONMNIST, "
+         "so it’s optimized for grayscale input. The app normalizes to Fashion-MNIST style for better accuracy.")
 
 try:
     model, class_names = load_model()
@@ -56,10 +61,15 @@ uploaded = st.file_uploader("Upload PNG/JPG", type=["png","jpg","jpeg"])
 if uploaded and model_loaded:
     image = Image.open(uploaded)
     st.image(image, caption="Uploaded image", use_column_width=True)
-    x = preprocess(image)
+
+    # --- CHANGED: use preprocess_image instead of custom preprocess ---
+    x = preprocess_image(image, target_size=(28, 28), dataset_type='fashion_mnist')
+
     probs = model.predict(x, verbose=0)[0]
     idx = int(np.argmax(probs))
     st.subheader(f"Prediction: {class_names[idx]}")
+
+    # Keep your probabilities view (unchanged behavior)
     st.write("Probabilities:")
     for i, p in enumerate(probs):
         st.write(f"{class_names[i]}: {p:.3f}")
