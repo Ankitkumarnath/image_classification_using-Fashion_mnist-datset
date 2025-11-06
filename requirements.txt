@@ -1,7 +1,5 @@
-tensorflow==2.16.1
+streamlit>=1.39
+tensorflow==2.20.0
 numpy
-matplotlib
-scikit-learn
 pillow
-streamlit
-seaborn
+opencv-python-headless
